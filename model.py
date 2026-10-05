@@ -409,8 +409,47 @@ def rollout_latent_dynamics(initial_embedding: torch.Tensor, actions: torch.Tens
 
     return stacked
 
-# Step 26 - multi_step_prediction_error (not yet solved)
-# TODO: implement
+# Step 26 - multi_step_prediction_error
+def multi_step_prediction_error(dataset: dict, encoder_params: dict, target_params: dict, predictor_params: dict, horizon: int = 5, num_samples: int = 32) -> float:
+    # TODO: Evaluate multi-step latent prediction accuracy via mean MSE over samples
+    obs_all = dataset['observations']
+    act_all = dataset['actions']
+    next_obs_all = dataset['next_observations']
+
+
+    n_transitions = obs_all.shape[0]
+    num_valid = min(num_samples, n_transitions - horizon)
+    if num_valid <= 0:
+        return 0.0
+
+    with torch.no_grad():
+        start_obs = obs_all[:num_valid]
+
+        action_seqs = torch.stack(
+            [act_all[i : i + horizon] for i in range(num_valid)],
+            dim=0,
+        )
+
+        future_obs = torch.stack(
+            [next_obs_all[i : i + horizon] for i in range(num_valid)],
+            dim=1,
+        )
+
+        z_0 = encode_batch(start_obs, encoder_params)
+
+        pred_traj = rollout_latent_dynamics(z_0, action_seqs, predictor_params)
+        pred_future_latents = pred_traj[1:]
+
+        h_steps, b_size, c, h, w = future_obs.shape
+        future_obs_flat = future_obs.reshape(h_steps * b_size, c, h, w)
+        target_latents_flat = encode_batch(future_obs_flat, target_params)
+        target_future_latents = target_latents_flat.reshape(
+            h_steps, b_size, -1
+        )
+
+        mse = torch.mean((pred_future_latents - target_future_latents) ** 2)
+
+    return mse.item()
 
 # Step 27 - init_linear_probe (not yet solved)
 # TODO: implement
