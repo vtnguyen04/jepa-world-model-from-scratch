@@ -462,11 +462,79 @@ def init_linear_probe(latent_dim: int = 32, state_dim: int = 2, seed: int = 0) -
         'b': b,
     }
 
-# Step 28 - train_linear_probe (not yet solved)
-# TODO: implement
+# Step 28 - train_linear_probe
+def train_linear_probe(embeddings: torch.Tensor, states: torch.Tensor, probe_params: dict, num_steps: int = 100, lr: float = 1e-2) -> dict:
+    # TODO: Train the linear probe via MSE regression from frozen embeddings to true agent states.
+    z = embeddings.detach()
+    s = states.detach()
 
-# Step 29 - probe_state_recovery (not yet solved)
-# TODO: implement
+    w = probe_params["w"].detach().clone().requires_grad_(True)
+    b = probe_params["b"].detach().clone().requires_grad_(True)
+
+    for _ in range(num_steps):
+        pred = z @ w + b
+        loss = torch.mean((pred - s) ** 2)
+
+        loss.backward()
+
+        with torch.no_grad():
+            w -= lr * w.grad
+            b -= lr * b.grad
+
+            # Reset gradients for the next iteration
+            w.grad = None
+            b.grad = None
+
+    return {
+        "w": w.detach().clone(),
+        "b": b.detach().clone(),
+    }
+
+# Step 29 - probe_state_recovery
+def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict | None = None, num_probe_steps: int = 100) -> dict:
+    # TODO: Encode observations, train linear probe, report state recovery metrics
+    observations = dataset['observations']
+    states = dataset['states']
+
+    # 1. Encode observations to freeze latents (no gradients through encoder)
+    with torch.no_grad():
+        embeddings = encode_batch(observations, encoder_params)
+
+    n, d = embeddings.shape
+    state_dim = states.shape[-1]
+
+    # 2. Initialize linear probe if not provided
+    if probe_params is None:
+        probe_params = init_linear_probe(
+            latent_dim=d, state_dim=state_dim, seed=0
+        )
+
+    # 3. Train the linear probe on frozen embeddings and true states
+    trained_probe = train_linear_probe(
+        embeddings, states, probe_params, num_steps=num_probe_steps
+    )
+
+    # 4. Predict states using the trained linear probe: pred = embeddings @ w + b
+    # (or F.linear / matmul matching train_linear_probe layout)
+    w = trained_probe['w']
+    b = trained_probe['b']
+
+    with torch.no_grad():
+        if w.shape == (d, state_dim):
+            pred_states = embeddings @ w + b
+        else:
+            # w shape: (state_dim, d)
+            pred_states = embeddings @ w.T + b
+
+        # 5. Compute MSE and MAE evaluation metrics
+        mse = torch.mean((pred_states - states) ** 2).item()
+        mae = torch.mean(torch.abs(pred_states - states)).item()
+
+    return {
+        'mse': mse,
+        'mean_abs_error': mae,
+        'probe_params': trained_probe,
+    }
 
 # Step 30 - encode_goal (not yet solved)
 # TODO: implement
