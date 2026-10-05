@@ -599,8 +599,57 @@ def mpc_step(start_embedding, goal_embedding, predictor_params, n_sequences, hor
 
     return int(best_plan[0].item())
 
-# Step 36 - run_mpc_episode (not yet solved)
-# TODO: implement
+# Step 36 - run_mpc_episode
+import math
+def run_mpc_episode(encoder_params, predictor_params, goal_pos, room_size, agent_size, max_steps, n_sequences, horizon, n_actions):
+    # TODO: Run a closed-loop random-shooting MPC episode toward a goal position.
+    if not isinstance(goal_pos, torch.Tensor):
+        goal_pos_tensor = torch.tensor(goal_pos, dtype=torch.float32)
+    else:
+        goal_pos_tensor = goal_pos.float().clone()
+
+    goal_gx, goal_gy = int(goal_pos_tensor[0].item()), int(goal_pos_tensor[1].item())
+
+    goal_embedding = encode_goal(goal_pos_tensor, encoder_params, room_size=room_size)
+
+    state, obs = env_reset(room_size=room_size)
+    curr_gx, curr_gy = int(state[0].item()), int(state[1].item())
+    trajectory = [(curr_gx, curr_gy)]
+    steps = 0
+
+    while steps < max_steps:
+        if curr_gx == goal_gx and curr_gy == goal_gy:
+            break
+
+        obs_batch = obs.unsqueeze(0)
+        curr_embedding = encode_batch(obs_batch, encoder_params).squeeze(0)
+
+        action = mpc_step(
+            curr_embedding,
+            goal_embedding,
+            predictor_params,
+            n_sequences=n_sequences,
+            horizon=horizon,
+            n_actions=n_actions,
+        )
+
+        state, obs = env_step(state, action, room_size=room_size)
+        curr_gx, curr_gy = int(state[0].item()), int(state[1].item())
+        trajectory.append((curr_gx, curr_gy))
+        steps += 1
+
+    success = (curr_gx == goal_gx) and (curr_gy == goal_gy)
+    final_distance = math.sqrt(
+        (float(curr_gx) - float(goal_pos_tensor[0].item())) ** 2
+        + (float(curr_gy) - float(goal_pos_tensor[1].item())) ** 2
+    )
+
+    return {
+        "success": success,
+        "steps": steps,
+        "trajectory": trajectory,
+        "final_distance": float(final_distance),
+    }
 
 # Step 37 - evaluate_planner (not yet solved)
 # TODO: implement
