@@ -472,7 +472,7 @@ def train_linear_probe(embeddings: torch.Tensor, states: torch.Tensor, probe_par
     b = probe_params["b"].detach().clone().requires_grad_(True)
 
     for _ in range(num_steps):
-        pred = z @ w + b
+        pred = z @ w.T + b
         loss = torch.mean((pred - s) ** 2)
 
         loss.backward()
@@ -493,8 +493,8 @@ def train_linear_probe(embeddings: torch.Tensor, states: torch.Tensor, probe_par
 # Step 29 - probe_state_recovery
 def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict | None = None, num_probe_steps: int = 100) -> dict:
     # TODO: Encode observations, train linear probe, report state recovery metrics
-    observations = dataset["observations"]
-    states = dataset["states"]
+    observations = dataset['observations']
+    states = dataset['states'].float()
 
     embeddings = encode_batch(observations, encoder_params)
     latent_dim = embeddings.shape[-1]
@@ -509,15 +509,17 @@ def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict
         embeddings, states, probe_params, num_steps=num_probe_steps
     )
 
-    pred = embeddings @ trained_probe["w"] + trained_probe["b"]
+    w = trained_probe['w']
+    b = trained_probe['b']
+    pred = embeddings @ w + b
 
-    mse = torch.mean((pred - states) ** 2).item()
-    mean_abs_error = torch.mean(torch.abs(pred - states)).item()
+    mse = float(torch.mean((pred - states) ** 2).item())
+    mean_abs_error = float(torch.mean(torch.abs(pred - states)).item())
 
     return {
-        "mse": mse,
-        "mean_abs_error": mean_abs_error,
-        "probe_params": trained_probe,
+        'mse': mse,
+        'mean_abs_error': mean_abs_error,
+        'probe_params': trained_probe,
     }
 
 # Step 30 - encode_goal (not yet solved)
