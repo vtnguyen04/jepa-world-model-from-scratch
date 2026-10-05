@@ -186,8 +186,25 @@ def encode_batch(obs: torch.Tensor, encoder_params: dict) -> torch.Tensor:
     # TODO: Batch-encode observations into latent embeddings using encoder params.
     return encoder_forward(obs, encoder_params)
 
-# Step 13 - init_predictor_params (not yet solved)
-# TODO: implement
+# Step 13 - init_predictor_params
+def init_predictor_params(latent_dim: int = 32, action_dim: int = 4, hidden_dim: int = 64, seed: int = 0) -> dict:
+    torch.manual_seed(seed)
+
+    def create_weight(shape):
+        return (torch.randn(shape) * 0.02).requires_grad_(True)
+
+    def create_bias(shape):
+        return torch.zeros(shape, requires_grad=True)
+
+    params = {
+        'action_embed_w': create_weight((action_dim, latent_dim)),
+        'fc1_w': create_weight((hidden_dim, 2 * latent_dim)),  # 2 * latent_dim due to concatenation [z; a_embed]
+        'fc1_b': create_bias((hidden_dim,)),
+        'fc2_w': create_weight((latent_dim, hidden_dim)),
+        'fc2_b': create_bias((latent_dim,)),
+    }
+
+    return params
 
 # Step 14 - embed_action (not yet solved)
 # TODO: implement
