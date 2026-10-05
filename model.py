@@ -277,8 +277,12 @@ def jepa_loss(predicted: torch.Tensor, target: torch.Tensor, online_embeddings: 
     # TODO: Compose the full JEPA objective from prediction and VICReg terms...
     return pred_weight * prediction_loss(predicted, target) + var_weight * vicreg_regularizer(online_embeddings)
 
-# Step 22 - collapse_metric (not yet solved)
-# TODO: implement
+# Step 22 - collapse_metric
+def collapse_metric(embeddings: torch.Tensor) -> torch.Tensor:
+    # TODO: Measure collapse as the mean of per-dimension batch stds
+    per_dim_std = embeddings.std(dim=0)
+
+    return per_dim_std.mean()
 
 # Step 23 - jepa_training_step (not yet solved)
 # TODO: implement
