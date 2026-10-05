@@ -265,8 +265,12 @@ def covariance_loss(embeddings: torch.Tensor) -> torch.Tensor:
 
     return off_diag_sum / d
 
-# Step 20 - vicreg_regularizer (not yet solved)
-# TODO: implement
+# Step 20 - vicreg_regularizer
+def vicreg_regularizer(embeddings: torch.Tensor, var_weight: float = 1.0, cov_weight: float = 0.04, gamma: float = 1.0) -> torch.Tensor:
+    l_var = variance_loss(embeddings, gamma=gamma)
+
+    l_cov = covariance_loss(embeddings)
+    return var_weight * l_var + cov_weight * l_cov
 
 # Step 21 - jepa_loss (not yet solved)
 # TODO: implement
