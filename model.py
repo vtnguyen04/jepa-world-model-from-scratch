@@ -57,8 +57,47 @@ def env_step(state: torch.Tensor, action: int, room_size: int = 8) -> tuple[torc
     next_obs = render_observation(next_state, room_size)
     return next_state, next_obs
 
-# Step 6 - collect_random_transitions (not yet solved)
-# TODO: implement
+# Step 6 - collect_random_transitions
+def collect_random_transitions(num_transitions: int, room_size: int = 8, seed: int = 0) -> dict:
+    # TODO: collect a dataset of (obs, action, next_obs, state, next_state) transitions...
+    
+    state, obs = env_reset(room_size, seed)
+
+    observations = []
+    actions = []
+    next_observations = []
+    states = []
+    next_states = []
+
+    if num_transitions == 0:
+        return {
+            'observations': torch.empty((0, 1, room_size, room_size), dtype=obs.dtype, device=obs.device),
+            'actions': torch.empty((0,), dtype=torch.long, device=obs.device),
+            'next_observations': torch.empty((0, 1, room_size, room_size), dtype=obs.dtype, device=obs.device),
+            'states': torch.empty((0, 2), dtype=state.dtype, device=state.device),
+            'next_states': torch.empty((0, 2), dtype=state.dtype, device=state.device),
+        }
+    for _ in range(num_transitions):    
+        
+        action = torch.randint(0, 4, ())
+
+        next_state, next_obs = env_step(state, action.item(), room_size)
+        
+        observations.append(obs)
+        actions.append(action)
+        next_observations.append(next_obs)
+        states.append(state)
+        next_states.append(next_state)
+
+        state, obs = next_state, next_obs
+    
+    return {
+        'observations': torch.stack(observations),
+        'actions': torch.stack(actions),
+        'next_observations': torch.stack(next_observations),
+        'states': torch.stack(states),
+        'next_states': torch.stack(next_states),
+    }
 
 # Step 7 - build_transition_dataset (not yet solved)
 # TODO: implement
