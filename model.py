@@ -167,8 +167,19 @@ def init_target_encoder(encoder_params: dict) -> dict:
     
     return target_params
 
-# Step 11 - ema_update (not yet solved)
-# TODO: implement
+# Step 11 - ema_update
+def ema_update(target_params: dict, encoder_params: dict, tau: float = 0.99) -> dict:
+    # TODO: Refresh target encoder params via EMA of the online encoder.
+    
+    updated_params = {}
+
+    with torch.no_grad():
+        for key in target_params:
+            target_val = target_params[key]
+            online_val = encoder_params[key]
+            updated_params[key] = tau * target_val + (1.0 - tau) * online_val
+
+    return updated_params
 
 # Step 12 - encode_batch (not yet solved)
 # TODO: implement
