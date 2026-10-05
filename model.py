@@ -497,29 +497,45 @@ def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict
     states = dataset['states'].float()
 
     embeddings = encode_batch(observations, encoder_params)
-    latent_dim = embeddings.shape[-1]
+    batch_size, latent_dim = embeddings.shape
     state_dim = states.shape[-1]
 
     if probe_params is None:
+        torch.manual_seed(0)
         probe_params = init_linear_probe(
             latent_dim=latent_dim, state_dim=state_dim, seed=0
         )
 
+    w_orig = probe_params['w']
+    b_orig = probe_params['b']
+
+    if w_orig.shape == (state_dim, latent_dim):
+        w_for_train = w_orig.T.clone()
+    else:
+        w_for_train = w_orig.clone()
+
+    probe_for_train = {'w': w_for_train, 'b': b_orig.clone()}
+
     trained_probe = train_linear_probe(
-        embeddings, states, probe_params, num_steps=num_probe_steps
+        embeddings, states, probe_for_train, num_steps=num_probe_steps
     )
 
-    w = trained_probe['w']
-    b = trained_probe['b']
-    pred = embeddings @ w + b
+    w_trained = trained_probe['w']
+    if w_trained.shape == (latent_dim, state_dim):
+        final_w = w_trained.T
+    else:
+        final_w = w_trained
 
+    final_probe_params = {'w': final_w, 'b': trained_probe['b']}
+
+    pred = embeddings @ final_probe_params['w'].T + final_probe_params['b']
     mse = float(torch.mean((pred - states) ** 2).item())
     mean_abs_error = float(torch.mean(torch.abs(pred - states)).item())
 
     return {
         'mse': mse,
         'mean_abs_error': mean_abs_error,
-        'probe_params': trained_probe,
+        'probe_params': final_probe_params,
     }
 
 # Step 30 - encode_goal (not yet solved)
