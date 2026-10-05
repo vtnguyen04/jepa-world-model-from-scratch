@@ -284,8 +284,58 @@ def collapse_metric(embeddings: torch.Tensor) -> torch.Tensor:
 
     return per_dim_std.mean()
 
-# Step 23 - jepa_training_step (not yet solved)
-# TODO: implement
+# Step 23 - jepa_training_step
+def jepa_training_step(batch: dict, encoder_params: dict, target_params: dict, predictor_params: dict, lr: float = 1e-3, tau: float = 0.99) -> tuple[dict, dict, dict, float, float]:
+    # TODO: Perform one full JEPA gradient update on a batch of transitions
+    obs = batch['observations']
+    actions = batch['actions']
+    next_obs = batch['next_observations']
+
+    online_encoder = {
+        k: v.detach().requires_grad_(True) for k, v in encoder_params.items()
+    }
+    online_predictor = {
+        k: v.detach().requires_grad_(True) for k, v in predictor_params.items()
+    }
+
+    online_z = encode_batch(obs, online_encoder)
+
+    with torch.no_grad():
+        target_z = encode_batch(next_obs, target_params)
+
+    predicted_z = predict_next_embedding(online_z, actions, online_predictor)
+
+    loss = jepa_loss(predicted_z, target_z, online_z)
+
+    loss.backward()
+
+    def update_params_sgd(params: dict) -> dict:
+        new_params = {}
+        for k, p in params.items():
+            if p.grad is not None:
+                p_updated = (p - lr * p.grad).detach().requires_grad_(True)
+            else:
+                p_updated = p.detach().requires_grad_(True)
+            new_params[k] = p_updated
+        return new_params
+
+    updated_encoder_params = update_params_sgd(online_encoder)
+    updated_predictor_params = update_params_sgd(online_predictor)
+
+    updated_target_params = ema_update(
+        target_params, updated_encoder_params, tau=tau
+    )
+
+    loss_val = float(loss.item())
+    collapse_val = float(collapse_metric(online_z.detach()).item())
+
+    return (
+        updated_encoder_params,
+        updated_target_params,
+        updated_predictor_params,
+        loss_val,
+        collapse_val,
+    )
 
 # Step 24 - train_jepa (not yet solved)
 # TODO: implement
