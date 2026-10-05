@@ -493,47 +493,31 @@ def train_linear_probe(embeddings: torch.Tensor, states: torch.Tensor, probe_par
 # Step 29 - probe_state_recovery
 def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict | None = None, num_probe_steps: int = 100) -> dict:
     # TODO: Encode observations, train linear probe, report state recovery metrics
-    observations = dataset['observations']
-    states = dataset['states']
+    observations = dataset["observations"]
+    states = dataset["states"]
 
-    # 1. Encode observations to freeze latents (no gradients through encoder)
-    with torch.no_grad():
-        embeddings = encode_batch(observations, encoder_params)
-
-    n, d = embeddings.shape
+    embeddings = encode_batch(observations, encoder_params)
+    latent_dim = embeddings.shape[-1]
     state_dim = states.shape[-1]
 
-    # 2. Initialize linear probe if not provided
     if probe_params is None:
         probe_params = init_linear_probe(
-            latent_dim=d, state_dim=state_dim, seed=0
+            latent_dim=latent_dim, state_dim=state_dim, seed=0
         )
 
-    # 3. Train the linear probe on frozen embeddings and true states
     trained_probe = train_linear_probe(
         embeddings, states, probe_params, num_steps=num_probe_steps
     )
 
-    # 4. Predict states using the trained linear probe: pred = embeddings @ w + b
-    # (or F.linear / matmul matching train_linear_probe layout)
-    w = trained_probe['w']
-    b = trained_probe['b']
+    pred = embeddings @ trained_probe["w"] + trained_probe["b"]
 
-    with torch.no_grad():
-        if w.shape == (d, state_dim):
-            pred_states = embeddings @ w + b
-        else:
-            # w shape: (state_dim, d)
-            pred_states = embeddings @ w.T + b
-
-        # 5. Compute MSE and MAE evaluation metrics
-        mse = torch.mean((pred_states - states) ** 2).item()
-        mae = torch.mean(torch.abs(pred_states - states)).item()
+    mse = torch.mean((pred - states) ** 2).item()
+    mean_abs_error = torch.mean(torch.abs(pred - states)).item()
 
     return {
-        'mse': mse,
-        'mean_abs_error': mae,
-        'probe_params': trained_probe,
+        "mse": mse,
+        "mean_abs_error": mean_abs_error,
+        "probe_params": trained_probe,
     }
 
 # Step 30 - encode_goal (not yet solved)
