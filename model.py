@@ -538,11 +538,27 @@ def probe_state_recovery(dataset: dict, encoder_params: dict, probe_params: dict
         'probe_params': final_probe_params,
     }
 
-# Step 30 - encode_goal (not yet solved)
-# TODO: implement
+# Step 30 - encode_goal
+def encode_goal(goal_state: torch.Tensor, encoder_params: dict, room_size: int = 8) -> torch.Tensor:
+    # TODO: Convert a desired agent position into a latent goal embedding.
+    obs = render_observation(goal_state, room_size=room_size)
 
-# Step 31 - latent_cost (not yet solved)
-# TODO: implement
+    obs_batch = obs.unsqueeze(0)
+
+    emb_batch = encoder_forward(obs_batch, encoder_params)
+
+    return emb_batch.squeeze(0)
+
+# Step 31 - latent_cost
+def latent_cost(latents, goal_embedding):
+    # TODO: Compute squared L2 distance from each latent embedding to a goal embedding...
+    obs = render_observation(goal_state, room_size=room_size)
+
+    obs_batch = obs.unsqueeze(0)
+
+    emb_batch = encoder_forward(obs_batch, encoder_params)
+
+    return emb_batch.squeeze(0)
 
 # Step 32 - sample_action_sequences (not yet solved)
 # TODO: implement
