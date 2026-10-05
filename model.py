@@ -58,45 +58,40 @@ def env_step(state: torch.Tensor, action: int, room_size: int = 8) -> tuple[torc
     return next_state, next_obs
 
 # Step 6 - collect_random_transitions
+import torch
+
+
 def collect_random_transitions(num_transitions: int, room_size: int = 8, seed: int = 0) -> dict:
-    # TODO: collect a dataset of (obs, action, next_obs, state, next_state) transitions...
+    torch.manual_seed(seed)
     
     state, obs = env_reset(room_size, seed)
+    
+    obs_sample = obs.unsqueeze(0) if obs.ndim == 2 else obs
 
-    observations = []
-    actions = []
-    next_observations = []
-    states = []
-    next_states = []
+    observations = torch.empty((num_transitions, *obs_sample.shape), dtype=obs.dtype, device=obs.device)
+    next_observations = torch.empty((num_transitions, *obs_sample.shape), dtype=obs.dtype, device=obs.device)
+    actions = torch.empty((num_transitions,), dtype=torch.long, device=obs.device)
+    states = torch.empty((num_transitions, *state.shape), dtype=state.dtype, device=state.device)
+    next_states = torch.empty((num_transitions, *state.shape), dtype=state.dtype, device=state.device)
 
-    if num_transitions == 0:
-        return {
-            'observations': torch.empty((0, 1, room_size, room_size), dtype=obs.dtype, device=obs.device),
-            'actions': torch.empty((0,), dtype=torch.long, device=obs.device),
-            'next_observations': torch.empty((0, 1, room_size, room_size), dtype=obs.dtype, device=obs.device),
-            'states': torch.empty((0, 2), dtype=state.dtype, device=state.device),
-            'next_states': torch.empty((0, 2), dtype=state.dtype, device=state.device),
-        }
-    for _ in range(num_transitions):    
-        
+    for i in range(num_transitions):    
         action = torch.randint(0, 4, ())
-
         next_state, next_obs = env_step(state, action.item(), room_size)
         
-        observations.append(obs)
-        actions.append(action)
-        next_observations.append(next_obs)
-        states.append(state)
-        next_states.append(next_state)
+        observations[i] = obs.unsqueeze(0) if obs.ndim == 2 else obs
+        actions[i] = action
+        next_observations[i] = next_obs.unsqueeze(0) if next_obs.ndim == 2 else next_obs
+        states[i] = state
+        next_states[i] = next_state
 
         state, obs = next_state, next_obs
     
     return {
-        'observations': torch.stack(observations),
-        'actions': torch.stack(actions),
-        'next_observations': torch.stack(next_observations),
-        'states': torch.stack(states),
-        'next_states': torch.stack(next_states),
+        'observations': observations,
+        'actions': actions,
+        'next_observations': next_observations,
+        'states': states,
+        'next_states': next_states,
     }
 
 # Step 7 - build_transition_dataset (not yet solved)
