@@ -99,8 +99,32 @@ def build_transition_dataset(num_transitions: int = 512, room_size: int = 8, see
     # TODO: Build a JEPA training-ready transition dataset by collecting random transitions...
     return collect_random_transitions(num_transitions, room_size=room_size, seed=seed)
 
-# Step 8 - init_encoder_params (not yet solved)
-# TODO: implement
+# Step 8 - init_encoder_params
+def init_encoder_params(obs_channels: int = 1, room_size: int = 8, latent_dim: int = 32, seed: int = 0) -> dict:
+    # TODO: Initialize parameters of a small CNN encoder that maps pixel observations to latent embeddings.
+   
+    torch.manual_seed(seed)
+
+    h1 = (room_size + 2 * 1 - 3) + 1
+    h2 = (h1 + 2 * 1 - 3) // 2 + 1
+    fc_in = 32 * h2 * h2
+    
+    def create_weight(shape):
+        return (torch.randn(shape) * 0.1).requires_grad_(True)
+
+    def create_bias(shape):
+        return torch.zeros(shape, requires_grad=True)
+
+    params = {
+        'conv1_w': create_weight((16, obs_channels, 3, 3)),
+        'conv1_b': create_bias((16,)),
+        'conv2_w': create_weight((32, 16, 3, 3)),
+        'conv2_b': create_bias((32,)),
+        'fc_w': create_weight((latent_dim, fc_in)),
+        'fc_b': create_bias((latent_dim,)),
+    }
+
+    return params
 
 # Step 9 - encoder_forward (not yet solved)
 # TODO: implement
