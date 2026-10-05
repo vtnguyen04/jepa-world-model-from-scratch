@@ -586,8 +586,18 @@ def select_best_plan(action_sequences, costs):
 
     return action_sequences[best_idx]
 
-# Step 35 - mpc_step (not yet solved)
-# TODO: implement
+# Step 35 - mpc_step
+def mpc_step(start_embedding, goal_embedding, predictor_params, n_sequences, horizon, n_actions):
+    # TODO: Perform one random-shooting MPC step; return first action of best plan
+    action_sequences = sample_action_sequences(n_sequences, horizon, n_actions)
+
+    costs = score_action_sequences(
+        start_embedding, action_sequences, goal_embedding, predictor_params
+    )
+
+    best_plan = select_best_plan(action_sequences, costs)
+
+    return int(best_plan[0].item())
 
 # Step 36 - run_mpc_episode (not yet solved)
 # TODO: implement
